@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Tópicos - Kruskal & Poda da AGM</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Vis.js CDN (Biblioteca de visualização de grafos física e interativa) -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #090d16, #020617);
+            --panel-bg: rgba(30, 41, 59, 0.45);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-hover: rgba(59, 130, 246, 0.15);
+            --font-family: 'Inter', sans-serif;
+            --card-bg: rgba(17, 24, 39, 0.4);
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Layout Lateral */
+        .sidebar {
+            width: 440px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        /* Cabeçalho */
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--panel-border);
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        /* Informações do Algoritmo de Kruskal */
+        .algo-info-panel {
+            padding: 16px 24px;
+            background: rgba(59, 130, 246, 0.05);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .algo-info-panel strong {
+            color: #60a5fa;
+        }
+
+        /* Grid de Estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .stat-card .label {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .stat-card .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Navegação das Abas */
+        .tabs-nav {
+            display: flex;
+            border-bottom: 1px solid var(--panel-border);
+            padding: 0 24px;
+            gap: 16px;
+            background: rgba(15, 23, 42, 0.1);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-family);
+            font-size: 0.88rem;
+            font-weight: 600;
+            padding: 14px 4px;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        /* Conteúdo das Abas */
+        .tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Scrollbar */
+        .tab-content-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .tab-content-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .tab-content-container::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.2);
+            border-radius: 3px;
+        }
+        .tab-content-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.4);
+        }
+
+        /* Lista de Tópicos */
+        .topic-list-item {
+            background: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .topic-list-item:hover {
+            background: rgba(30, 41, 59, 0.55);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .topic-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .topic-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .word-count-badge {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .topic-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .word-badge {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 3px 8px;
+            color: #d1d5db;
+            transition: all 0.15s ease;
+        }
+
+        .word-badge:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-blue);
+            color: #ffffff;
+        }
+
+        /* Lista de Chamados */
+        .ticket-list-item {
+            background: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ticket-list-item:hover {
+            background: rgba(30, 41, 59, 0.55);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .ticket-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .ticket-id {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        .ticket-topic-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+        }
+
+        .ticket-body {
+            font-size: 0.84rem;
+            color: #e5e7eb;
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .ticket-words-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 10px;
+        }
+
+        /* Área do Canvas do Grafo */
+        #network-canvas {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0b101c, #02040a);
+        }
+
+        /* Painel Flutuante de Detalhes do Vértice */
+        .floating-panel {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            width: 340px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+            z-index: 5;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .floating-panel.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .floating-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+
+        .floating-panel-header h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: capitalize;
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .close-panel-btn:hover {
+            color: #ffffff;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-weight: 600;
+        }
+
+        .mini-tickets-section {
+            margin-top: 14px;
+        }
+
+        .mini-tickets-section h4 {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .mini-ticket-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            color: #d1d5db;
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+
+        /* CONTROLES FLUTUANTES SUPERIORES */
+        .controls-overlay {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+            z-index: 5;
+        }
+
+        /* Segmented Control de Modos do Algoritmo */
+        .mode-selector {
+            display: flex;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 3px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .mode-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 9px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mode-btn:hover {
+            color: #ffffff;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-blue);
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
+        }
+
+        .control-btn {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .control-btn.active {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: var(--accent-blue);
+        }
+
+        .control-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* Legenda do Processo da AGM */
+        .legend-overlay {
+            position: absolute;
+            bottom: 24px;
+            left: 464px; /* Afastado da sidebar */
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+            font-size: 0.74rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .legend-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        /* Destacados */
+        .highlighted-border {
+            border-color: var(--accent-blue) !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.25) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>
+                <svg style="width:20px; height:20px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="url(#gradient-icon)"/>
+                    <defs>
+                        <linearGradient id="gradient-icon" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#60a5fa"/>
+                            <stop offset="1" stop-color="#a78bfa"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                Helpdesk AGM
+            </h1>
+            <p>Heurística de Poda de Árvore Geradora Máxima (Kruskal)</p>
+        </div>
+
+        <!-- Descritor da heurística -->
+        <div class="algo-info-panel">
+            <span>
+                A <strong>Árvore Geradora Máxima (AGM)</strong> agrupa palavras-chave fortemente coocorrentes. 
+                A <strong>Poda</strong> remove arestas de menor peso, gerando tópicos disjuntos com tamanho mínimo de 3 nós.
+            </span>
+        </div>
+
+        <!-- Estatísticas Rápidas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Arestas</div>
+                <div id="stat-edges" class="value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Arestas AGM</div>
+                <div id="stat-mst" class="value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Mantidas (Tópicos)</div>
+                <div id="stat-kept" class="value" style="color: var(--accent-green)">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Podadas/Cortadas</div>
+                <div id="stat-pruned" class="value" style="color: var(--accent-red)">0</div>
+            </div>
+        </div>
+
+        <!-- Abas -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('topics-tab')">Componentes Finais</button>
+            <button class="tab-btn" onclick="switchTab('tickets-tab')">Chamados Associados</button>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div class="tab-content-container">
+            <!-- Aba 1: Componentes / Tópicos -->
+            <div id="topics-tab" class="tab-panel active">
+                <div id="topics-list"></div>
+            </div>
+
+            <!-- Aba 2: Chamados -->
+            <div id="tickets-tab" class="tab-panel">
+                <div id="tickets-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <!-- Controles Flutuantes Superiores -->
+        <div class="controls-overlay">
+            <!-- Segmented Control de Modos de Visualização -->
+            <div class="mode-selector">
+                <button id="btn-mode-full" class="mode-btn active" onclick="setViewMode('full')">Grafo Completo</button>
+                <button id="btn-mode-mst" class="mode-btn" onclick="setViewMode('mst')">AGM (Kruskal)</button>
+                <button id="btn-mode-topics" class="mode-btn" onclick="setViewMode('topics')">Cortes de Poda</button>
+            </div>
+            
+            <button class="control-btn" onclick="resetView()">
+                <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6L12 11V7C15.31 7 18 9.69 18 13C18 16.31 15.31 19 12 19C8.69 19 6 16.31 6 13H4C4 17.42 7.58 21 12 21C16.42 21 20 17.42 20 13C20 8.58 16.42 5 12 5Z"/></svg>
+                Resetar Grafo
+            </button>
+            <button id="physics-toggle-btn" class="control-btn active" onclick="togglePhysics()">
+                <svg viewBox="0 0 24 24"><path d="M19 13H5V11H19V13Z"/></svg>
+                Física Ativa
+            </button>
+        </div>
+
+        <!-- Canvas do Grafo -->
+        <div id="network-canvas"></div>
+
+        <!-- Legenda Flutuante Dinâmica -->
+        <div id="legend-panel" class="legend-overlay">
+            <div class="legend-title">Legenda de Arestas</div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: #10b981;"></div>
+                <span>Aresta da AGM (Mantida/Tópicos)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border-top: 2px dashed #ef4444; height: 0; background: transparent;"></div>
+                <span>Aresta Podada (Corte Aprovado)</span>
+            </div>
+            <div id="legend-cooccur" class="legend-item">
+                <div class="legend-line" style="background: rgba(255,255,255,0.08);"></div>
+                <span>Coocorrência Comum (Fora da AGM)</span>
+            </div>
+        </div>
+
+        <!-- Painel de Detalhes -->
+        <div id="detail-panel" class="floating-panel">
+            <div class="floating-panel-header">
+                <h3 id="panel-title">Termo</h3>
+                <button class="close-panel-btn" onclick="closePanel()">&times;</button>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Tópico Associado:</span>
+                <span id="panel-topic" class="detail-value">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Grau de Coocorrência:</span>
+                <span id="panel-degree" class="detail-value">-</span>
+            </div>
+            <div class="mini-tickets-section">
+                <h4>Chamados que utilizam este termo:</h4>
+                <div id="panel-mini-tickets"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DADOS GERADOS PELO PYTHON -->
+    <script type="text/javascript">
+        const rawData = DADOS_INJETADOS_AQUI;
+    </script>
+
+    <!-- PROGRAMAÇÃO DO DASHBOARD -->
+    <script type="text/javascript">
+        let network = null;
+        let physicsEnabled = true;
+        let currentMode = 'full'; // 'full', 'mst', 'topics'
+        
+        // Inicializa estatísticas
+        document.getElementById('stat-edges').innerText = rawData.estatisticas_agm.total_arestas;
+        document.getElementById('stat-mst').innerText = rawData.estatisticas_agm.arestas_mst;
+        document.getElementById('stat-kept').innerText = rawData.estatisticas_agm.arestas_mantidas;
+        document.getElementById('stat-pruned').innerText = rawData.estatisticas_agm.arestas_podadas;
+
+        // Renderização dos Tópicos no Sidebar
+        const topicsList = document.getElementById('topics-list');
+        Object.entries(rawData.comunidades).forEach(([id, info]) => {
+            const item = document.createElement('div');
+            item.className = 'topic-list-item';
+            item.onclick = () => selectTopic(id, item);
+            
+            const wordsHtml = info.palavras.map(w => `<span class="word-badge">${w}</span>`).join('');
+            
+            item.innerHTML = `
+                <div class="topic-header-row">
+                    <div class="topic-title">
+                        <span class="color-dot" style="background: ${info.color}"></span>
+                        Tópico #${id} (Base: "${info.rotulo_base}")
+                    </div>
+                    <span class="word-count-badge">${info.palavras.length} palavras</span>
+                </div>
+                <div class="topic-words">
+                    ${wordsHtml}
+                </div>
+            `;
+            topicsList.appendChild(item);
+        });
+
+        // Renderização dos Chamados no Sidebar
+        const ticketsList = document.getElementById('tickets-list');
+        rawData.chamados.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'ticket-list-item';
+            item.id = `ticket-item-${c.id}`;
+            item.onclick = () => selectTicket(c.id, item);
+            
+            const topicInfo = c.topico ? rawData.comunidades[c.topico] : null;
+            const badgeStyle = topicInfo ? `background: ${topicInfo.color}33; color: ${topicInfo.color}; border: 1px solid ${topicInfo.color}` : 'background: rgba(255,255,255,0.05); color: #9ca3af';
+            const badgeText = topicInfo ? `Tópico #${c.topico}` : 'Não Classificado';
+            
+            const wordsHtml = c.palavras.map(w => `<span class="word-badge" style="font-size:0.7rem; padding: 2px 6px;">${w}</span>`).join('');
+
+            item.innerHTML = `
+                <div class="ticket-header-row">
+                    <span class="ticket-id">Chamado #${c.id}</span>
+                    <span class="ticket-topic-tag" style="${badgeStyle}">${badgeText}</span>
+                </div>
+                <div class="ticket-body">${c.texto}</div>
+                <div class="ticket-words-list">${wordsHtml}</div>
+            `;
+            ticketsList.appendChild(item);
+        });
+
+        // Configuração do vis.js
+        const container = document.getElementById('network-canvas');
+        const nodesDataSet = new vis.DataSet(rawData.nodes);
+        const edgesDataSet = new vis.DataSet(); // Preenchido dinamicamente na função de view mode
+        
+        const data = {
+            nodes: nodesDataSet,
+            edges: edgesDataSet
+        };
+
+        const options = {
+            nodes: {
+                shape: 'dot',
+                scaling: {
+                    min: 12,
+                    max: 42,
+                    label: {
+                        enabled: true,
+                        min: 11,
+                        max: 20
+                    }
+                },
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.5)',
+                    size: 8,
+                    x: 2,
+                    y: 2
+                }
+            },
+            edges: {
+                scaling: {
+                    min: 1,
+                    max: 8
+                },
+                smooth: {
+                    type: 'continuous',
+                    roundness: 0.5
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 150,
+                hideEdgesOnDrag: false
+            },
+            physics: {
+                forceAtlas2Based: {
+                    gravitationalConstant: -38,
+                    centralGravity: 0.015,
+                    springLength: 95,
+                    springConstant: 0.04
+                },
+                solver: 'forceAtlas2Based',
+                stabilization: {
+                    iterations: 120,
+                    updateInterval: 25
+                }
+            }
+        };
+
+        network = new vis.Network(container, data, options);
+
+        // Aplica o modo inicial
+        setViewMode('full');
+
+        // Eventos
+        network.on("selectNode", function (params) {
+            if (params.nodes.length > 0) {
+                showNodeDetails(params.nodes[0]);
+            }
+        });
+
+        network.on("deselectNode", function () {
+            closePanel();
+        });
+
+        // Alterna entre abas da sidebar
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.includes(tabId === 'topics-tab' ? 'Componentes' : 'Chamados'));
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // CONTROLADOR DE MODOS DE VISUALIZAÇÃO DO KRUSKAL
+        function setViewMode(mode) {
+            currentMode = mode;
+            
+            // Atualiza botões
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            if (mode === 'full') {
+                document.getElementById('btn-mode-full').classList.add('active');
+                document.getElementById('legend-cooccur').style.display = 'flex';
+            }
+            if (mode === 'mst') {
+                document.getElementById('btn-mode-mst').classList.add('active');
+                document.getElementById('legend-cooccur').style.display = 'none';
+            }
+            if (mode === 'topics') {
+                document.getElementById('btn-mode-topics').classList.add('active');
+                document.getElementById('legend-cooccur').style.display = 'none';
+            }
+            
+            const edgesUpdate = [];
+            
+            rawData.edges.forEach(e => {
+                let hidden = false;
+                let color = {};
+                let dashes = false;
+                let width = e.value;
+                
+                if (mode === 'full') {
+                    // Grafo Completo: Mostra todas as arestas
+                    if (e.status === 'mantida') {
+                        color = { color: '#10b981', highlight: '#34d399', hover: '#34d399' }; // Verde para mantidas
+                        width = Math.max(e.value * 2.5, 4);
+                    } else if (e.status === 'podada') {
+                        color = { color: '#ef4444', highlight: '#f87171', hover: '#f87171' }; // Vermelho tracejado para cortadas
+                        dashes = true;
+                        width = 2.5;
+                    } else {
+                        color = { color: 'rgba(255, 255, 255, 0.08)', highlight: 'rgba(96, 165, 250, 0.4)', hover: 'rgba(255, 255, 255, 0.2)' };
+                        width = e.value;
+                    }
+                } else if (mode === 'mst') {
+                    // Apenas AGM: Mostra apenas arestas da AGM antes e depois do corte
+                    if (e.status === 'mantida') {
+                        color = { color: '#3b82f6', highlight: '#60a5fa', hover: '#60a5fa' }; // Azul para mantidas
+                        width = 4;
+                    } else if (e.status === 'podada') {
+                        color = { color: '#ef4444', highlight: '#f87171', hover: '#f87171' }; // Vermelho tracejado para cortadas
+                        dashes = true;
+                        width = 3.5;
+                    } else {
+                        hidden = true;
+                    }
+                } else if (mode === 'topics') {
+                    // Componentes Finais: Mostra apenas as arestas que definem os tópicos finais (mantidas)
+                    if (e.status === 'mantida') {
+                        const sourceNode = rawData.nodes.find(n => n.id === e.from);
+                        const commColor = sourceNode && sourceNode.topico_id !== null ? rawData.comunidades[sourceNode.topico_id].color : '#9ca3af';
+                        color = { color: commColor, highlight: commColor, hover: commColor };
+                        width = 4;
+                    } else {
+                        hidden = true;
+                    }
+                }
+                
+                edgesUpdate.push({
+                    id: e.id,
+                    from: e.from,
+                    to: e.to,
+                    hidden: hidden,
+                    color: color,
+                    dashes: dashes,
+                    width: width,
+                    title: e.title
+                });
+            });
+            
+            edgesDataSet.clear();
+            edgesDataSet.add(edgesUpdate);
+        }
+
+        // Mostra detalhes de um nó no painel flutuante
+        function showNodeDetails(nodeId) {
+            const nodeData = rawData.nodes.find(n => n.id === nodeId);
+            const topicId = nodeData.topico_id;
+            
+            document.getElementById('panel-title').innerText = nodeId;
+            
+            if (topicId !== null && topicId !== undefined) {
+                const comm = rawData.comunidades[topicId];
+                document.getElementById('panel-topic').innerHTML = `<span style="color:${comm.color}">#${topicId} (${comm.rotulo_base})</span>`;
+            } else {
+                document.getElementById('panel-topic').innerText = "Nenhum";
+            }
+            
+            // Conta as arestas ativas/conectadas a este nó dependendo do modo atual
+            const connectedEdges = edgesDataSet.get({
+                filter: function (edge) {
+                    return (edge.from === nodeId || edge.to === nodeId) && !edge.hidden;
+                }
+            });
+            document.getElementById('panel-degree').innerText = connectedEdges.length;
+
+            // Busca chamados relacionados com a palavra
+            const miniTicketsList = document.getElementById('panel-mini-tickets');
+            miniTicketsList.innerHTML = '';
+            
+            const relatedTickets = rawData.chamados.filter(c => c.palavras.includes(nodeId));
+            if (relatedTickets.length > 0) {
+                relatedTickets.forEach(c => {
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = 'mini-ticket-card';
+                    ticketDiv.innerText = `[Chamado #${c.id}]: "${c.texto}"`;
+                    miniTicketsList.appendChild(ticketDiv);
+                });
+            } else {
+                miniTicketsList.innerHTML = '<div style="color:var(--text-secondary); font-size:0.75rem;">Nenhum chamado encontrado.</div>';
+            }
+
+            document.getElementById('detail-panel').classList.add('active');
+            
+            // Destaca chamados relacionados na lista
+            document.querySelectorAll('.ticket-list-item').forEach(item => item.classList.remove('highlighted-border'));
+            relatedTickets.forEach(c => {
+                const el = document.getElementById(`ticket-item-${c.id}`);
+                if (el) el.classList.add('highlighted-border');
+            });
+        }
+
+        // Destaca um tópico
+        function selectTopic(topicId, element) {
+            document.querySelectorAll('.topic-list-item').forEach(item => item.classList.remove('highlighted-border'));
+            element.classList.add('highlighted-border');
+
+            const targetWords = rawData.comunidades[topicId].palavras;
+            const updateArray = rawData.nodes.map(n => {
+                const isTarget = targetWords.includes(n.id);
+                return {
+                    id: n.id,
+                    color: isTarget ? n.color : {
+                        background: 'rgba(50, 60, 80, 0.1)',
+                        border: 'rgba(50, 60, 80, 0.15)',
+                        highlight: n.color.highlight,
+                        hover: n.color.hover
+                    },
+                    font: { color: isTarget ? '#f3f4f6' : 'rgba(243,244,246,0.1)' }
+                };
+            });
+            nodesDataSet.update(updateArray);
+
+            // Calcula centro de gravidade do tópico para animar a câmera
+            const positions = network.getPositions(targetWords);
+            let avgX = 0, avgY = 0, count = 0;
+            for (let word in positions) {
+                avgX += positions[word].x;
+                avgY += positions[word].y;
+                count++;
+            }
+            if (count > 0) {
+                network.moveTo({
+                    position: {x: avgX/count, y: avgY/count},
+                    scale: 1.1,
+                    animation: {
+                        duration: 800,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        }
+
+        // Destaca os termos de um chamado no grafo
+        function selectTicket(ticketId, element) {
+            document.querySelectorAll('.ticket-list-item').forEach(item => item.classList.remove('highlighted-border'));
+            element.classList.add('highlighted-border');
+
+            const ticket = rawData.chamados.find(c => c.id === ticketId);
+            if (!ticket) return;
+
+            const targetWords = ticket.palavras;
+            const updateArray = rawData.nodes.map(n => {
+                const isTarget = targetWords.includes(n.id);
+                return {
+                    id: n.id,
+                    color: isTarget ? n.color : {
+                        background: 'rgba(50, 60, 80, 0.1)',
+                        border: 'rgba(50, 60, 80, 0.15)',
+                        highlight: n.color.highlight,
+                        hover: n.color.hover
+                    },
+                    font: { color: isTarget ? '#f3f4f6' : 'rgba(243,244,246,0.1)' }
+                };
+            });
+            nodesDataSet.update(updateArray);
+
+            network.selectNodes(targetWords);
+            if (targetWords.length > 0) {
+                network.fit({
+                    nodes: targetWords,
+                    animation: {
+                        duration: 800,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        }
+
+        function resetView() {
+            document.querySelectorAll('.topic-list-item').forEach(item => item.classList.remove('highlighted-border'));
+            document.querySelectorAll('.ticket-list-item').forEach(item => item.classList.remove('highlighted-border'));
+            closePanel();
+
+            const resetArray = rawData.nodes.map(n => {
+                return {
+                    id: n.id,
+                    color: n.color,
+                    font: { color: '#f3f4f6' }
+                };
+            });
+            nodesDataSet.update(resetArray);
+            
+            network.unselectNodes();
+            network.fit({
+                animation: {
+                    duration: 1000,
+                    easingFunction: 'easeOutQuad'
+                }
+            });
+        }
+
+        function closePanel() {
+            document.getElementById('detail-panel').classList.remove('active');
+            document.querySelectorAll('.ticket-list-item').forEach(item => item.classList.remove('highlighted-border'));
+        }
+
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({ physics: { enabled: physicsEnabled } });
+            
+            const btn = document.getElementById('physics-toggle-btn');
+            if (physicsEnabled) {
+                btn.classList.add('active');
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 13H5V11H19V13Z"/></svg> Física Ativa';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z"/></svg> Física Pausada';
+            }
+        }
+    </script>
+</body>
+</html>
