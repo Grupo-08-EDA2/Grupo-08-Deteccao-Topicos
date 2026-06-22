@@ -174,8 +174,12 @@ A modelagem do grafo e os algoritmos principais foram implementados pelo grupo.
 
 ## Integrantes — Grupo 08
 
-- Vitor Carvalho Pereira
-- Gabriel Fernando de Jesus Silva
-- Giovana Ferreira Santos
-- Leonardo Lopes Cruz
-- Pedro Santos Ferreira
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/vcpVitor"><img style="border-radius: 60%;" src="https://github.com/vcpVitor.png" width="200px;" alt=""/><br /><sub><b>Vitor Carvalho Pereira <br> (211062615)</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/MMcLovin"><img style="border-radius: 60%;" src="https://github.com/MMcLovin.png" width="200px;" alt=""/><br /><sub><b>Gabriel Fernando De Jesus Silva <br> (222022162)</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/gih7915"><img style="border-radius: 60%;" src="https://github.com/gih7915.png" width="200px;" alt=""/><br /><sub><b>Giovana Ferreira Santos <br> (231034707)</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/Leonardo-LC"><img style="border-radius: 60%;" src="https://github.com/Leonardo-LC.png" width="200px;" alt=""/><br /><sub><b>Leonardo Lopes Cruz <br> (242032460)</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/pedro-hsf"><img style="border-radius: 60%;" src="https://github.com/pedro-hsf.png" width="200px;" alt=""/><br /><sub><b>Pedro Henrique dos Santos Ferreira <br> (211063229)</b></sub></a><br /></td>
+  </tr>
+</table>
