@@ -103,6 +103,7 @@ def montar_dados(grafo, resultado, chamados_processados):
         "nodes": nodes,
         "edges": edges,
         "chamados": chamados_processados,
+        "tam_minimo": resultado.get("tam_minimo", 4),
         "comunidades": {
             k: {"rotulo_base": v["rotulo_base"], "palavras": v["palavras"], "color": _cor_topico(k)["bg"]}
             for k, v in comunidades.items()

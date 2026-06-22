@@ -574,7 +574,7 @@
         <div class="algo-info-panel">
             <span>
                 A <strong>Árvore Geradora Máxima (AGM)</strong> agrupa palavras-chave fortemente coocorrentes. 
-                A <strong>Poda</strong> remove arestas de menor peso, gerando tópicos disjuntos com tamanho mínimo de 3 nós.
+                A <strong>Poda</strong> remove arestas de menor peso, gerando tópicos disjuntos com tamanho mínimo de <strong id="heuristica-tam-minimo" style="color: #60a5fa;">-</strong> nós.
             </span>
         </div>
 
@@ -645,17 +645,17 @@
         <!-- Legenda Flutuante Dinâmica -->
         <div id="legend-panel" class="legend-overlay">
             <div class="legend-title">Legenda de Arestas</div>
-            <div class="legend-item">
+            <div id="legend-mst-kept" class="legend-item">
                 <div class="legend-line" style="background: #10b981;"></div>
                 <span>Aresta da AGM (Mantida/Tópicos)</span>
             </div>
-            <div class="legend-item">
+            <div id="legend-mst-pruned" class="legend-item">
                 <div class="legend-line" style="border-top: 2px dashed #ef4444; height: 0; background: transparent;"></div>
                 <span>Aresta Podada (Corte Aprovado)</span>
             </div>
             <div id="legend-cooccur" class="legend-item">
-                <div class="legend-line" style="background: rgba(255,255,255,0.08);"></div>
-                <span>Coocorrência Comum (Fora da AGM)</span>
+                <div class="legend-line" style="background: rgba(255,255,255,0.25);"></div>
+                <span>Coocorrência de Termos</span>
             </div>
         </div>
 
@@ -690,8 +690,10 @@
         let network = null;
         let physicsEnabled = true;
         let currentMode = 'full'; // 'full', 'mst', 'topics'
+        let activeSelectionWords = null; 
         
         // Inicializa estatísticas
+        document.getElementById('heuristica-tam-minimo').innerText = rawData.tam_minimo;
         document.getElementById('stat-edges').innerText = rawData.estatisticas_agm.total_arestas;
         document.getElementById('stat-mst').innerText = rawData.estatisticas_agm.arestas_mst;
         document.getElementById('stat-kept').innerText = rawData.estatisticas_agm.arestas_mantidas;
@@ -837,19 +839,40 @@
         function setViewMode(mode) {
             currentMode = mode;
             
-            // Atualiza botões
+            // Atualiza botões e legendas dinamicamente
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const legendMstKept = document.getElementById('legend-mst-kept');
+            const legendMstPruned = document.getElementById('legend-mst-pruned');
+            const legendCooccur = document.getElementById('legend-cooccur');
+            
             if (mode === 'full') {
                 document.getElementById('btn-mode-full').classList.add('active');
-                document.getElementById('legend-cooccur').style.display = 'flex';
+                
+                legendCooccur.style.display = 'flex';
+                legendMstKept.style.display = 'none';
+                legendMstPruned.style.display = 'none';
             }
             if (mode === 'mst') {
                 document.getElementById('btn-mode-mst').classList.add('active');
-                document.getElementById('legend-cooccur').style.display = 'none';
+                
+                legendCooccur.style.display = 'none';
+                legendMstKept.style.display = 'flex';
+                legendMstKept.querySelector('span').innerText = 'Aresta da AGM (Mantida)';
+                legendMstKept.querySelector('.legend-line').style.background = '#3b82f6';
+                
+                legendMstPruned.style.display = 'flex';
+                legendMstPruned.querySelector('span').innerText = 'Aresta Podada (Corte)';
             }
             if (mode === 'topics') {
                 document.getElementById('btn-mode-topics').classList.add('active');
-                document.getElementById('legend-cooccur').style.display = 'none';
+                
+                legendCooccur.style.display = 'none';
+                legendMstKept.style.display = 'flex';
+                legendMstKept.querySelector('span').innerText = 'Aresta de Tópico (Fração da AGM)';
+                legendMstKept.querySelector('.legend-line').style.background = '#10b981';
+                
+                legendMstPruned.style.display = 'none';
             }
             
             const edgesUpdate = [];
@@ -861,18 +884,10 @@
                 let width = e.value;
                 
                 if (mode === 'full') {
-                    // Grafo Completo: Mostra todas as arestas
-                    if (e.status === 'mantida') {
-                        color = { color: '#10b981', highlight: '#34d399', hover: '#34d399' }; // Verde para mantidas
-                        width = Math.max(e.value * 2.5, 4);
-                    } else if (e.status === 'podada') {
-                        color = { color: '#ef4444', highlight: '#f87171', hover: '#f87171' }; // Vermelho tracejado para cortadas
-                        dashes = true;
-                        width = 2.5;
-                    } else {
-                        color = { color: 'rgba(255, 255, 255, 0.08)', highlight: 'rgba(96, 165, 250, 0.4)', hover: 'rgba(255, 255, 255, 0.2)' };
-                        width = e.value;
-                    }
+                    // Grafo Completo: Mostra todas as arestas de coocorrência de forma uniforme (sem diferenciação de AGM)
+                    color = { color: 'rgba(255, 255, 255, 0.25)', highlight: 'rgba(96, 165, 250, 0.6)', hover: 'rgba(255, 255, 255, 0.4)' };
+                    width = Math.max(e.value * 1.5, 1.5);
+                    dashes = false;
                 } else if (mode === 'mst') {
                     // Apenas AGM: Mostra apenas arestas da AGM antes e depois do corte
                     if (e.status === 'mantida') {
@@ -893,6 +908,15 @@
                         color = { color: commColor, highlight: commColor, hover: commColor };
                         width = 4;
                     } else {
+                        hidden = true;
+                    }
+                }
+                
+                // Oculta arestas que conectam a vértices esmaecidos/fora da seleção ativa
+                if (!hidden && activeSelectionWords) {
+                    const fromSelected = activeSelectionWords.includes(e.from);
+                    const toSelected = activeSelectionWords.includes(e.to);
+                    if (!fromSelected || !toSelected) {
                         hidden = true;
                     }
                 }
@@ -967,6 +991,8 @@
             element.classList.add('highlighted-border');
 
             const targetWords = rawData.comunidades[topicId].palavras;
+            activeSelectionWords = targetWords; 
+            
             const updateArray = rawData.nodes.map(n => {
                 const isTarget = targetWords.includes(n.id);
                 return {
@@ -981,6 +1007,7 @@
                 };
             });
             nodesDataSet.update(updateArray);
+            setViewMode(currentMode); 
 
             // Calcula centro de gravidade do tópico para animar a câmera
             const positions = network.getPositions(targetWords);
@@ -1011,6 +1038,8 @@
             if (!ticket) return;
 
             const targetWords = ticket.palavras;
+            activeSelectionWords = targetWords; 
+            
             const updateArray = rawData.nodes.map(n => {
                 const isTarget = targetWords.includes(n.id);
                 return {
@@ -1025,6 +1054,7 @@
                 };
             });
             nodesDataSet.update(updateArray);
+            setViewMode(currentMode); 
 
             network.selectNodes(targetWords);
             if (targetWords.length > 0) {
@@ -1042,6 +1072,7 @@
             document.querySelectorAll('.topic-list-item').forEach(item => item.classList.remove('highlighted-border'));
             document.querySelectorAll('.ticket-list-item').forEach(item => item.classList.remove('highlighted-border'));
             closePanel();
+            activeSelectionWords = null; // Limpa a seleção ativa
 
             const resetArray = rawData.nodes.map(n => {
                 return {
@@ -1051,6 +1082,7 @@
                 };
             });
             nodesDataSet.update(resetArray);
+            setViewMode(currentMode); // Restaura a visibilidade padrão de todas as arestas do modo atual
             
             network.unselectNodes();
             network.fit({

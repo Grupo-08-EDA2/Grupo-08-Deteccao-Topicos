@@ -129,4 +129,5 @@ def detectar_topicos(grafo, tam_minimo=4):
         "arestas_podadas": podadas,
         "componentes": componentes,
         "mapa_palavra_topico": mapa,
+        "tam_minimo": tam_minimo,
     }
