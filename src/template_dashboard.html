@@ -548,6 +548,19 @@
             border-color: var(--accent-blue) !important;
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.25) !important;
         }
+
+        /* Estilização para o container de tooltips/hints do Vis.js */
+        div.vis-tooltip {
+            background-color: #1e293b !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 8px !important;
+            padding: 10px 14px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+            color: #f3f4f6 !important;
+            font-family: var(--font-family) !important;
+            font-size: 0.8rem !important;
+            line-height: 1.5 !important;
+        }
     </style>
 </head>
 <body>
@@ -687,6 +700,22 @@
 
     <!-- PROGRAMAÇÃO DO DASHBOARD -->
     <script type="text/javascript">
+        // Converte os títulos de strings HTML para elementos DOM reais (evita exibir tags HTML brutas como texto)
+        rawData.nodes.forEach(n => {
+            if (n.title && typeof n.title === 'string') {
+                const div = document.createElement('div');
+                div.innerHTML = n.title;
+                n.title = div;
+            }
+        });
+        rawData.edges.forEach(e => {
+            if (e.title && typeof e.title === 'string') {
+                const div = document.createElement('div');
+                div.innerHTML = e.title;
+                e.title = div;
+            }
+        });
+
         let network = null;
         let physicsEnabled = true;
         let currentMode = 'full'; // 'full', 'mst', 'topics'

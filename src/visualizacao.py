@@ -57,12 +57,9 @@ def montar_dados(grafo, resultado, chamados_processados):
         cor = _cor_topico(tid)
         rotulo_base = comunidades[tid]["rotulo_base"] if tid in comunidades else "-"
         tooltip = (
-            f'<div style="font-family:Inter,sans-serif; padding:8px; background:#1e293b; '
-            f'color:#fff; border-radius:8px; border:1px solid rgba(255,255,255,0.1)">'
             f'<strong style="color:{cor["hover"]}">{no.capitalize()}</strong><br/>'
-            f'<span style="font-size:0.75rem; color:#9ca3af;">Topico: #{tid} ({rotulo_base})</span><br/>'
-            f'<span style="font-size:0.75rem; color:#9ca3af;">Grau de Coocorrencia: {graus[no]}</span>'
-            f'</div>'
+            f'<span style="font-size:0.75rem; color:#9ca3af;">Tópico: #{tid} ({rotulo_base})</span><br/>'
+            f'<span style="font-size:0.75rem; color:#9ca3af;">Grau de Coocorrência: {graus[no]}</span>'
         )
         nodes.append({
             "id": no,
@@ -96,7 +93,7 @@ def montar_dados(grafo, resultado, chamados_processados):
             "to": chave[1],
             "value": peso,
             "status": status,
-            "title": f"Coocorrencia: {peso} chamados juntos<br/>Status AGM: {status.capitalize()}",
+            "title": f"<strong>Coocorrência:</strong> {peso} chamados juntos<br/><strong>Status AGM:</strong> {status.capitalize()}",
         })
 
     return {
