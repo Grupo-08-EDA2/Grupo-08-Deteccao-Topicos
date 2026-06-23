@@ -1,3 +1,9 @@
+# Slides
+
+Link para os slides: https://canva.link/tqau0clqdpkepxl
+
+Arquivo do Slide:
+
 # Detecção de Tópicos em Chamados de Suporte Técnico
 
 Sistema de **detecção de tópicos (comunidades) baseado em grafos** aplicado a uma
