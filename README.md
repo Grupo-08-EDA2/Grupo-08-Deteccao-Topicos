@@ -2,7 +2,7 @@
 
 Link para os slides: https://canva.link/tqau0clqdpkepxl
 
-Arquivo do Slide:
+[Arquivo do Slide](/slides/Slides%20-%20Apresentaçao%20EDA2.pdf)
 
 # Detecção de Tópicos em Chamados de Suporte Técnico
 
